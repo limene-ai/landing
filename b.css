@@ -312,7 +312,8 @@ a.perfil__n:hover { color: var(--accent); }
   @keyframes latir-m { 0%, 100% { transform: scale(.75); } 50% { transform: scale(1.4); } }
   /* El tooltip sale del punto también en celular (las píldoras son fijas, nada las empuja) */
   .escena.abierto .tip { visibility: hidden; }
-  .tip { max-width: calc(100vw - 32px); padding: 9px 11px; transition: left 520ms cubic-bezier(.2,.7,.2,1), top 520ms cubic-bezier(.2,.7,.2,1); }
+  .tip { max-width: calc(100vw - 32px); padding: 9px 11px; transition: opacity 200ms ease; } /* sin transición de posición: sigue al dedo al instante */
+  .tip::after { display: none; } /* separado del punto para que el dedo no lo tape: sin flecha */
   .tip__titulo { font-size: 13px; }
   .tip__t { font-size: 12px; }
   .tip__dist svg { width: 100%; }

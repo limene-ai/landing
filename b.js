@@ -185,16 +185,20 @@
     dibujarDist(p.getAttribute("data-dist"));
     tip.hidden = false;
     if (window.getComputedStyle(tip).position !== "absolute") { tip.style.left = ""; tip.style.top = ""; return; }
-    var w = tip.offsetWidth, h = tip.offsetHeight, tw = el.clientWidth;
-    var cx = el.offsetLeft + p.offsetLeft + p.offsetWidth / 2, cy = el.offsetTop + p.offsetTop + p.offsetHeight / 2;
-    var left = Math.max(0, Math.min(cx - 16, tw - w));
-    // sale del punto: arriba si entra arriba, si no abajo; el margen inferior admite el aire bajo la grilla
-    var margen = movil ? 120 : 8;
-    var cabeArriba = cy - h - 14 >= el.offsetTop - 6, cabeAbajo = cy + 14 + h <= el.offsetTop + el.offsetHeight + margen;
-    var arriba = cabeArriba || !cabeAbajo;
+    // Se calcula en coordenadas de pantalla (exactas) y se convierte al final al marco del lienzo.
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var rp = p.getBoundingClientRect(), rl = lienzo.getBoundingClientRect(), rt = el.getBoundingClientRect();
+    var cx = rp.left + rp.width / 2, cy = rp.top + rp.height / 2;
+    var left = Math.max(rt.left, Math.min(cx - 16, rt.right - w));
+    // El dedo tapa un círculo de ~30 px de radio: el tooltip se coloca fuera de esa zona, arriba si
+    // entra y si no abajo; como último recurso, al tope del lienzo. En web, pegado al punto.
+    var dedo = movil ? 30 : 0, sep = movil ? 10 : 14;
+    var limSup = rt.top - (movil ? 34 : 6), limInf = rt.bottom + (movil ? 150 : 8);
+    var topArriba = cy - dedo - sep - h, topAbajo = cy + dedo + sep;
+    var arriba = topArriba >= limSup;
+    var top = arriba ? topArriba : (topAbajo + h <= limInf ? topAbajo : limSup);
     tip.classList.toggle("tip--abajo", !arriba);
-    var top = arriba ? Math.max(el.offsetTop - 6, cy - h - 14) : cy + 14;
-    tip.style.left = left + "px"; tip.style.top = top + "px";
+    tip.style.left = (left - rl.left) + "px"; tip.style.top = (top - rl.top) + "px";
     tip.style.setProperty("--tip-x", Math.max(8, Math.min(w - 16, cx - left - 4)) + "px");
   }
   function ocultar() { if (actual) actual.classList.remove("activa"); actual = null; relieve(null); tip.hidden = true; }
@@ -220,7 +224,8 @@
     recorrido.timer = window.setTimeout(siguiente, (n === 3 || n === 8 ? 2600 : 1900) * (movil ? 1.3 : 1));
   }
   function pausar() { recorrido.pausaHasta = Date.now() + 5000; }
-  var tactil = window.matchMedia("(hover: none)").matches;
+  // ?t=1 fuerza el modo táctil (para poder verificarlo en un navegador sin pantalla táctil)
+  var tactil = window.matchMedia("(hover: none)").matches || /[?&]t=1/.test(location.search);
   if (!tactil) {
     el.addEventListener("mousemove", function (e) { pausar(); var p = cercano(e.clientX, e.clientY); if (p) mostrar(p); });
     el.addEventListener("click", function (e) { pausar(); var p = cercano(e.clientX, e.clientY); if (p) mostrar(p); });
