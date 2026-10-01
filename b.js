@@ -2,6 +2,15 @@
 (function () {
   "use strict";
   document.documentElement.classList.add("js");
+
+  // Eventos de uso (Vercel Analytics, sin cookies ni datos personales). Si la analítica no está
+  // activa, `va` no existe y no pasa nada. Cada evento se manda una sola vez por visita.
+  var yaEnviado = {};
+  function evento(nombre, datos) {
+    if (yaEnviado[nombre + (datos && datos.cap ? ":" + datos.cap : "")]) return;
+    yaEnviado[nombre + (datos && datos.cap ? ":" + datos.cap : "")] = true;
+    try { if (window.va) window.va("event", { name: nombre, data: datos || {} }); } catch (e) {}
+  }
   var body = document.body, escena = document.getElementById("escena");
 
   // CTA por mailto desde las constantes del <body>
@@ -227,13 +236,13 @@
   // ?t=1 fuerza el modo táctil (para poder verificarlo en un navegador sin pantalla táctil)
   var tactil = window.matchMedia("(hover: none)").matches || /[?&]t=1/.test(location.search);
   if (!tactil) {
-    el.addEventListener("mousemove", function (e) { pausar(); var p = cercano(e.clientX, e.clientY); if (p) mostrar(p); });
+    el.addEventListener("mousemove", function (e) { pausar(); var p = cercano(e.clientX, e.clientY); if (p) { evento("explora_grilla"); mostrar(p); } });
     el.addEventListener("click", function (e) { pausar(); var p = cercano(e.clientX, e.clientY); if (p) mostrar(p); });
   } else {
     // En táctil no hay hover: se explora arrastrando el dedo por la grilla (radio amplio, sin scroll dentro del bloque).
     RADIO = 26;
     var tocando = false;
-    function alTocar(e) { var t = e.touches[0]; if (!t) return; pausar(); centros = null; var p = cercano(t.clientX, t.clientY); if (p) mostrar(p); }
+    function alTocar(e) { var t = e.touches[0]; if (!t) return; pausar(); centros = null; var p = cercano(t.clientX, t.clientY); if (p) { evento("explora_grilla"); mostrar(p); } }
     el.addEventListener("touchstart", function (e) { tocando = true; alTocar(e); }, { passive: true });
     el.addEventListener("touchmove", function (e) { if (!tocando) return; e.preventDefault(); var t = e.touches[0]; pausar(); var p = cercano(t.clientX, t.clientY); if (p && p !== actual) mostrar(p); }, { passive: false });
     el.addEventListener("touchend", function () { tocando = false; pausar(); }, { passive: true });
@@ -335,10 +344,11 @@
       for (var z = 0; z < rojas.length; z++) { var idx2 = Array.prototype.indexOf.call(puntos, rojas[z]); if ((idx2 % COLS) < COLS * 0.45 && Math.floor(idx2 / COLS) >= 3) { cand = rojas[z]; break; } }
       if (cand || rojas[0]) mostrar(cand || rojas[0], "Detectada antes del pago");
     }
-    if (capitulo === "implementacion") ocultar();
+    if (capitulo === "implementacion") { ocultar(); evento("llego_al_cierre"); }
   }
   function abrir(id) {
     if (!introLista) terminarIntro();
+    evento("capitulo", { cap: id });
     capitulo = id;
     caps.forEach(function (c) { c.classList.toggle("activa", c.getAttribute("data-cap") === id); });
     for (var h = 0; h < hojas.length; h++) hojas[h].classList.toggle("activa", hojas[h].getAttribute("data-cap") === id);
@@ -387,6 +397,12 @@
     } else { panel.hidden = true; panel.classList.remove("cerrando"); }
   }
   caps.forEach(function (c) { c.addEventListener("click", function () { var id = c.getAttribute("data-cap"); if (capitulo === id) cerrar(); else abrir(id); }); });
+
+  // Clic en cualquier botón de contacto (el único objetivo de la página)
+  (function () {
+    var ctas = document.querySelectorAll('a[data-cta="mail"]');
+    for (var i = 0; i < ctas.length; i++) ctas[i].addEventListener("click", function () { evento("contacto"); });
+  })();
 
   // Barra de capítulos en celular: fuera del contenedor recortado (iOS no desplaza un fixed dentro de
   // overflow:hidden) y con arrastre propio, para no depender del scroll nativo.
